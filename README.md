@@ -2,6 +2,16 @@
 
 This is a sample Vagrantfile to put together a "bunsen-ready" environment.
 
+# Instructions
+
+For the best experience, it is best to bring the environment up serially rather than in parallel.
+
+`vagrant up --no-parallel --provision`
+
+The `--no-parallel` flag makes sure the VMs are initialized one at a time.
+
+The `--provision` flag is used to ensure that Fedora 35+ hosts get the necessary packages for Bunsen provisioning installed.
+
 # Needs
 
 - Each host needs to be able to reach each other by name as specified in the Bunsen inventory file.
