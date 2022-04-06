@@ -22,7 +22,7 @@ $policycorescript = <<-SCRIPT
 source /etc/os-release
 if [ "${ID}" = "fedora" ] && [ "${VERSION_ID}" -ge 35 ]; then
   echo "Detected F35+, installing python selinux bindings needed by Ansible"
-  sudo dnf install -y python3-policycoreutils python3-libselinux
+  sudo dnf --disablerepo=* --enablerepo=updates --enablerepo=fedora install -y python3-policycoreutils python3-libselinux
 fi
 SCRIPT
 
