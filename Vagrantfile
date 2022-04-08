@@ -22,7 +22,7 @@ $policycorescript = <<-SCRIPT
 source /etc/os-release
 if [ "${ID}" = "fedora" ] && [ "${VERSION_ID}" -ge 35 ]; then
   echo "Detected F35+, installing python selinux bindings needed by Ansible"
-  sudo dnf install -y python3-policycoreutils python3-libselinux
+  sudo dnf --disablerepo=* --enablerepo=updates --enablerepo=fedora install -y python3-policycoreutils python3-libselinux
 fi
 SCRIPT
 
@@ -35,14 +35,14 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "infra" do |infra|
     infra.vm.hostname = "ossbunsen-infra"
-    infra.vm.box = "fedora-35-x86_64"
+    infra.vm.box = "fedora/34-cloud-base"
     infra.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
     end
   end
   config.vm.define "resource" do |resource|
     resource.vm.hostname = "ossbunsen-resource"
-    resource.vm.box = "fedora-35-x86_64"
+    resource.vm.box = "fedora/34-cloud-base"
     resource.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
     end
@@ -50,7 +50,7 @@ Vagrant.configure("2") do |config|
   (1..2).each do |prov|
     config.vm.define "farm-#{prov}" do |farm|
       farm.vm.hostname = "ossbunsen-farm-#{prov}"
-      farm.vm.box = "fedora-35-x86_64"
+      farm.vm.box = "fedora/34-cloud-base"
       farm.vm.provider :libvirt do |libvirt|
         libvirt.memory = 2048
         libvirt.storage :file, :size => '280G', :type => 'raw'
