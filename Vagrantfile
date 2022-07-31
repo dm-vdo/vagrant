@@ -35,22 +35,32 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "infra" do |infra|
     infra.vm.hostname = "ossbunsen-infra"
-    infra.vm.box = "fedora/34-cloud-base"
+    infra.vm.box = "fedora/35-cloud-base"
     infra.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
     end
   end
   config.vm.define "resource" do |resource|
     resource.vm.hostname = "ossbunsen-resource"
-    resource.vm.box = "fedora/34-cloud-base"
+    resource.vm.box = "fedora/35-cloud-base"
     resource.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
     end
   end
   (1..2).each do |prov|
-    config.vm.define "farm-#{prov}" do |farm|
-      farm.vm.hostname = "ossbunsen-farm-#{prov}"
-      farm.vm.box = "fedora/34-cloud-base"
+    config.vm.define "farm-f35-#{prov}" do |farm|
+      farm.vm.hostname = "ossbunsen-farm-f35-#{prov}"
+      farm.vm.box = "fedora/35-cloud-base"
+      farm.vm.provider :libvirt do |libvirt|
+        libvirt.memory = 2048
+        libvirt.storage :file, :size => '280G', :type => 'raw'
+      end
+    end
+  end
+  (1..2).each do |prov|
+    config.vm.define "farm-f36-#{prov}" do |farm|
+      farm.vm.hostname = "ossbunsen-farm-f36-#{prov}"
+      farm.vm.box = "fedora/36-cloud-base"
       farm.vm.provider :libvirt do |libvirt|
         libvirt.memory = 2048
         libvirt.storage :file, :size => '280G', :type => 'raw'
