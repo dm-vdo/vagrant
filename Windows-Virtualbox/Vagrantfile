@@ -1,0 +1,122 @@
+# -*- mode: ruby -*-                       
+# vi: set ft=ruby :
+                                                                               
+# Using vagrant-hostmanager allows for all of the configured VMs to be
+# reachable by name both inside the virtual environment as well as from the
+# hypervisor.  There is no DNS or other complicated machinery required to
+# enable this functionality; it modifies /etc/hosts on all the configured
+# machines based on the 'manage_guest' and 'manage_host' parameters.
+#              
+# vagrant-hostmanager: https://github.com/devopsgroup-io/vagrant-hostmanager
+unless Vagrant.has_plugin?("vagrant-hostmanager")
+  raise "vagrant-hostmanager is not installed, please install it by running `vagrant plugin install vagrant-hostmanager`"
+end                
+                                                                               
+# This is a script to be used on Fedora 35 and newer installations where
+# SELinux is enabled (at least to start) and requires the python bindings.
+#    
+# If these packages are not installed, ansible will throw an error "Aborting,
+# target uses selinux but python bindings (libselinux-python) aren't
+# installed!"                        
+$policycorescript = <<-SCRIPT            
+source /etc/os-release                   
+if [ "${ID}" = "fedora" ] && [ "${VERSION_ID}" -ge 35 ]; then
+  echo "Detected F35+, installing python selinux bindings needed by Ansible"
+  sudo dnf --disablerepo=* --enablerepo=updates --enablerepo=fedora install -y python3-policycoreutils python3-libselinux
+fi                                         
+SCRIPT                                         
+                                                                               
+# This allows /etc/hosts to be populated with unique ips rather than 127.0.0.1, which seems to be the default
+# when using VirtualBox and the hostmanager plugin. It uses the eth1 of the guest machine as the ip, or
+# "NOT-UP" if the machine isn't running. 
+$logger = Log4r::Logger.new('vagrantfile')
+def read_ip_address(machine)                                   
+  # Command may need to be tweaked by user if their guest OSes show different output for ifconfig. This
+  # has been tested on a FEDORA 35/36 guest machines.  
+  command = "LANG=en ifconfig  | grep 'inet '| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $2 }'"
+  result  = ""                                                
+                                                                               
+  $logger.info "Processing #{ machine.name } ... "
+                                                                               
+  begin                
+    # sudo is needed for ifconfig                                  
+    machine.communicate.sudo(command) do |type, data|
+      result << data if type == :stdout              
+    end                                   
+    $logger.info "Processing #{ machine.name } ... success"   
+  rescue
+    result = "# NOT-UP"
+    $logger.info "Processing #{ machine.name } ... not running"
+  end          
+                                                                               
+  # the second inet is more accurate
+  result.chomp.split("\n").last                               
+end
+
+Vagrant.configure("2") do |config|
+
+  # Call the special function above to get the IP to store in /etc/hosts
+  config.hostmanager.ip_resolver = proc do |vm, resolving_vm|
+    read_ip_address(vm)
+  end
+
+  # Share the vagrant folder so that the "runner" machine can easily
+  # access the private ssh keys of the guest machines.
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+  config.vm.network "private_network", type: "dhcp"
+  
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_guest = true
+  config.hostmanager.manage_host = true
+  config.hostmanager.include_offline = true
+  
+  config.vm.provider "virtualbox" do |vb|
+    # The following two entries will get you external IP access. 
+    vb.customize ["modifyvm", :id, "--cableconnected1", "on"]
+    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    
+    vb.memory = 2048
+    vb.cpus = 2
+  end
+
+  # This is the box to run ansible/bunsen on in order to provision
+  # the other boxes
+  config.vm.define "runner" do |infra|
+    infra.vm.hostname = "ossbunsen-runner"
+    infra.vm.box = "fedora/35-cloud-base"
+  end
+
+  # Box to handle RSVP, etc. 
+  config.vm.define "infra" do |infra|
+    infra.vm.hostname = "ossbunsen-infra"
+    infra.vm.box = "fedora/35-cloud-base"
+  end
+
+  # Main box to edit/build/test from.
+  config.vm.define "resource" do |resource|
+    resource.vm.hostname = "ossbunsen-resource"
+    resource.vm.box = "fedora/35-cloud-base"
+  end
+
+  # Boxes perl tests will run on.
+  (1..2).each do |prov|
+    file_to_disk = "/virtualbox/tmp/large_disk_f35_#{prov}.vdi"
+    config.vm.define "farm-f35-#{prov}" do |farm|
+      farm.vm.hostname = "ossbunsen-farm-f35-#{prov}"
+      farm.vm.box = "fedora/35-cloud-base"
+      farm.vm.disk :disk, :size => '280GB', name: file_to_disk
+    end
+  end
+  
+  (1..2).each do |prov|
+    file_to_disk = "/virtualbox/tmp/large_disk_f36_#{prov}.vdi"    
+    config.vm.define "farm-f36-#{prov}" do |farm|
+      farm.vm.hostname = "ossbunsen-farm-f36-#{prov}"
+      farm.vm.box = "fedora/36-cloud-base"
+      farm.vm.disk :disk, :size => '280GB', name: file_to_disk
+    end
+  end
+
+  # SELinux fix
+  config.vm.provision "shell", inline: $policycorescript
+end
