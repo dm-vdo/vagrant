@@ -83,36 +83,36 @@ Vagrant.configure("2") do |config|
   # the other boxes
   config.vm.define "runner" do |infra|
     infra.vm.hostname = "ossbunsen-runner"
-    infra.vm.box = "fedora/35-cloud-base"
+    infra.vm.box = "fedora/37-cloud-base"
   end
 
   # Box to handle RSVP, etc.
   config.vm.define "infra" do |infra|
     infra.vm.hostname = "ossbunsen-infra"
-    infra.vm.box = "fedora/35-cloud-base"
+    infra.vm.box = "fedora/37-cloud-base"
   end
 
   # Main box to edit/build/test from.
   config.vm.define "resource" do |resource|
     resource.vm.hostname = "ossbunsen-resource"
-    resource.vm.box = "fedora/35-cloud-base"
+    resource.vm.box = "fedora/37-cloud-base"
   end
 
   # Boxes perl tests will run on.
   (1..2).each do |prov|
-    file_to_disk = "/virtualbox/tmp/large_disk_f35_#{prov}.vdi"
-    config.vm.define "farm-f35-#{prov}" do |farm|
-      farm.vm.hostname = "ossbunsen-farm-f35-#{prov}"
-      farm.vm.box = "fedora/35-cloud-base"
+    file_to_disk = "/virtualbox/tmp/large_disk_f37_#{prov}.vdi"
+    config.vm.define "farm-f37-#{prov}" do |farm|
+      farm.vm.hostname = "ossbunsen-farm-f37-#{prov}"
+      farm.vm.box = "fedora/37-cloud-base"
       farm.vm.disk :disk, :size => '280GB', name: file_to_disk
     end
   end
 
   (1..2).each do |prov|
-    file_to_disk = "/virtualbox/tmp/large_disk_f36_#{prov}.vdi"    
-    config.vm.define "farm-f36-#{prov}" do |farm|
-      farm.vm.hostname = "ossbunsen-farm-f36-#{prov}"
-      farm.vm.box = "fedora/36-cloud-base"
+    file_to_disk = "/virtualbox/tmp/large_disk_f38_#{prov}.vdi"
+    config.vm.define "farm-f38-#{prov}" do |farm|
+      farm.vm.hostname = "ossbunsen-farm-f38-#{prov}"
+      farm.vm.box = "fedora/38-cloud-base"
       farm.vm.disk :disk, :size => '280GB', name: file_to_disk
     end
   end
