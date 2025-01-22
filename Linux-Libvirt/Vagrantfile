@@ -60,6 +60,7 @@ Vagrant.configure("2") do |config|
     infra.vm.box_url = box_urls[os_settings['infra']]
     infra.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
+      libvirt.machine_virtual_size = 40
     end
   end
   config.vm.define "resource" do |resource|
@@ -68,6 +69,7 @@ Vagrant.configure("2") do |config|
     resource.vm.box_url = box_urls[os_settings['resource']]
     resource.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
+      libvirt.machine_virtual_size = 40
     end
   end
   os_settings['farms'].each do |farm_os|
@@ -85,4 +87,11 @@ Vagrant.configure("2") do |config|
     end
   end
   config.vm.provision "shell", inline: $policycorescript
+  config.vm.provision "shell", inline: <<-SHELL
+    rootfs_device=$(df / | awk '$NF == "/" {print $1}')
+    root_base_device=$(echo ${rootfs_device} | sed 's/[0-9]\\+$//')
+    root_partition=$(echo ${rootfs_device} | sed "s|${root_base_device}||")
+    growpart ${root_base_device} ${root_partition}
+    btrfs filesystem resize max /
+  SHELL
 end
