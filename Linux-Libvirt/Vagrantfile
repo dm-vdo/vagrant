@@ -25,6 +25,14 @@ os_settings = {
 # they'll still be running)
 farms_count = 2
 
+# Add the location of the boxes to use
+box_urls = {
+  38 => 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-38-1.6.x86_64.vagrant-libvirt.box',
+  39 => 'https://dl.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-39-1.5.x86_64.vagrant-libvirt.box',
+  40 => 'https://dl.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-libvirt.x86_64-40-1.14.vagrant.libvirt.box',
+  41 => 'https://dl.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-libvirt-41-1.4.x86_64.vagrant.libvirt.box',
+}
+
 # This is a script to be used on Fedora 35 and newer installations where
 # SELinux is enabled (at least to start) and requires the python bindings.
 #
@@ -49,6 +57,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "infra" do |infra|
     infra.vm.hostname = "ossbunsen-infra"
     infra.vm.box = "fedora/#{os_settings['infra']}-cloud-base"
+    infra.vm.box_url = box_urls[os_settings['infra']]
     infra.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
     end
@@ -56,6 +65,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "resource" do |resource|
     resource.vm.hostname = "ossbunsen-resource"
     resource.vm.box = "fedora/#{os_settings['resource']}-cloud-base"
+    resource.vm.box_url = box_urls[os_settings['resource']]
     resource.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
     end
@@ -65,6 +75,7 @@ Vagrant.configure("2") do |config|
       config.vm.define "farm-fedora#{farm_os}-#{prov}" do |farm|
         farm.vm.hostname = "ossbunsen-farm-fedora#{farm_os}-#{prov}"
         farm.vm.box = "fedora/#{farm_os}-cloud-base"
+        farm.vm.box_url = box_urls[farm_os]
         farm.vm.provider :libvirt do |libvirt|
           libvirt.memory = 2048
           libvirt.machine_virtual_size = 40
