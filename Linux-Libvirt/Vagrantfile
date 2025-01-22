@@ -57,7 +57,9 @@ Vagrant.configure("2") do |config|
   config.vm.define "infra" do |infra|
     infra.vm.hostname = "ossbunsen-infra"
     infra.vm.box = "fedora/#{os_settings['infra']}-cloud-base"
-    infra.vm.box_url = box_urls[os_settings['infra']]
+    if box_urls.key?(os_settings['infra'])
+      infra.vm.box_url = box_urls[os_settings['infra']]
+    end
     infra.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
       libvirt.machine_virtual_size = 40
@@ -66,7 +68,9 @@ Vagrant.configure("2") do |config|
   config.vm.define "resource" do |resource|
     resource.vm.hostname = "ossbunsen-resource"
     resource.vm.box = "fedora/#{os_settings['resource']}-cloud-base"
-    resource.vm.box_url = box_urls[os_settings['resource']]
+    if box_urls.key?(os_settings['resource'])
+      resource.vm.box_url = box_urls[os_settings['resource']]
+    end
     resource.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
       libvirt.machine_virtual_size = 40
@@ -77,7 +81,9 @@ Vagrant.configure("2") do |config|
       config.vm.define "farm-fedora#{farm_os}-#{prov}" do |farm|
         farm.vm.hostname = "ossbunsen-farm-fedora#{farm_os}-#{prov}"
         farm.vm.box = "fedora/#{farm_os}-cloud-base"
-        farm.vm.box_url = box_urls[farm_os]
+        if box_urls.key?(farm_os)
+          farm.vm.box_url = box_urls[farm_os]
+        end
         farm.vm.provider :libvirt do |libvirt|
           libvirt.memory = 2048
           libvirt.machine_virtual_size = 40
