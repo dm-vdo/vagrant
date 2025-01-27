@@ -12,6 +12,27 @@ unless Vagrant.has_plugin?("vagrant-hostmanager")
   raise "vagrant-hostmanager is not installed, please install it by running `vagrant plugin install vagrant-hostmanager`"
 end
 
+os_settings = {
+  'infra'    => 40,
+  'resource' => 40,
+  'farms'    => [ 40, 41],
+}
+
+# Specify the total number of each OS to use for Farm machines
+# Note: If there are already farms defined and/or running, then this number
+# should only ever be INCREASED.  This is because reducing the count will
+# result in orphaned virtual machines. (Vagrant won't "know" about them, but
+# they'll still be running)
+farms_count = 2
+
+# Add the location of the boxes to use
+box_urls = {
+  38 => 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/38/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-38-1.6.x86_64.vagrant-libvirt.box',
+  39 => 'https://dl.fedoraproject.org/pub/fedora/linux/releases/39/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-39-1.5.x86_64.vagrant-libvirt.box',
+  40 => 'https://dl.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-libvirt.x86_64-40-1.14.vagrant.libvirt.box',
+  41 => 'https://dl.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Vagrant-libvirt-41-1.4.x86_64.vagrant.libvirt.box',
+}
+
 # This is a script to be used on Fedora 35 and newer installations where
 # SELinux is enabled (at least to start) and requires the python bindings.
 #
@@ -35,37 +56,48 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "infra" do |infra|
     infra.vm.hostname = "ossbunsen-infra"
-    infra.vm.box = "fedora/37-cloud-base"
+    infra.vm.box = "fedora/#{os_settings['infra']}-cloud-base"
+    if box_urls.key?(os_settings['infra'])
+      infra.vm.box_url = box_urls[os_settings['infra']]
+    end
     infra.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
+      libvirt.machine_virtual_size = 40
     end
   end
   config.vm.define "resource" do |resource|
     resource.vm.hostname = "ossbunsen-resource"
-    resource.vm.box = "fedora/37-cloud-base"
+    resource.vm.box = "fedora/#{os_settings['resource']}-cloud-base"
+    if box_urls.key?(os_settings['resource'])
+      resource.vm.box_url = box_urls[os_settings['resource']]
+    end
     resource.vm.provider :libvirt do |libvirt|
       libvirt.memory = 2048
+      libvirt.machine_virtual_size = 40
     end
   end
-  (1..2).each do |prov|
-    config.vm.define "farm-f37-#{prov}" do |farm|
-      farm.vm.hostname = "ossbunsen-farm-f37-#{prov}"
-      farm.vm.box = "fedora/37-cloud-base"
-      farm.vm.provider :libvirt do |libvirt|
-        libvirt.memory = 2048
-        libvirt.storage :file, :size => '280G', :type => 'raw'
-      end
-    end
-  end
-  (1..2).each do |prov|
-    config.vm.define "farm-f38-#{prov}" do |farm|
-      farm.vm.hostname = "ossbunsen-farm-f38-#{prov}"
-      farm.vm.box = "fedora/38-cloud-base"
-      farm.vm.provider :libvirt do |libvirt|
-        libvirt.memory = 2048
-        libvirt.storage :file, :size => '280G', :type => 'raw'
+  os_settings['farms'].each do |farm_os|
+    (1..farms_count).each do |prov|
+      config.vm.define "farm-fedora#{farm_os}-#{prov}" do |farm|
+        farm.vm.hostname = "ossbunsen-farm-fedora#{farm_os}-#{prov}"
+        farm.vm.box = "fedora/#{farm_os}-cloud-base"
+        if box_urls.key?(farm_os)
+          farm.vm.box_url = box_urls[farm_os]
+        end
+        farm.vm.provider :libvirt do |libvirt|
+          libvirt.memory = 2048
+          libvirt.machine_virtual_size = 40
+          libvirt.storage :file, :size => '280G', :type => 'raw'
+        end
       end
     end
   end
   config.vm.provision "shell", inline: $policycorescript
+  config.vm.provision "shell", inline: <<-SHELL
+    rootfs_device=$(df / | awk '$NF == "/" {print $1}')
+    root_base_device=$(echo ${rootfs_device} | sed 's/[0-9]\\+$//')
+    root_partition=$(echo ${rootfs_device} | sed "s|${root_base_device}||")
+    growpart ${root_base_device} ${root_partition}
+    btrfs filesystem resize max /
+  SHELL
 end
